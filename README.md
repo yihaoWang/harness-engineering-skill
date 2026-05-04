@@ -83,11 +83,22 @@ This separates "cheap truth" from "expensive truth" — both are tracked, neithe
 
 ## Install
 
+Two steps — clone the skill **and** symlink the slash commands:
+
 ```bash
+# 1. Clone the skill
 git clone https://github.com/yihaoWang/harness-engineering-skill.git ~/.claude/skills/harness
+
+# 2. Register slash commands (/harness-bootstrap, /harness-handoff, /harness-promote-lesson, /harness-evaluate)
+mkdir -p ~/.claude/commands
+ln -s ~/.claude/skills/harness/commands/*.md ~/.claude/commands/
 ```
 
-Claude Code picks it up automatically — no restart. The folder name **must** be `harness` (not `harness-engineering-skill`) so the skill name resolves.
+Why two steps: Claude Code auto-discovers skills under `~/.claude/skills/` and slash commands under `~/.claude/commands/`. The skill provides the logic; the commands provide the `/harness-*` entry points. Symlinking means a `git pull` on the skill auto-updates both.
+
+The skill folder **must** be named `harness` (not `harness-engineering-skill`) — the skill name needs to match.
+
+No restart needed; Claude Code picks both up automatically.
 
 ## Usage
 
@@ -191,7 +202,7 @@ If a rubric is missing, `evaluate` falls back to a built-in default. A starter `
 
 | Symptom | Likely cause |
 |---|---|
-| `/harness-bootstrap` not found | Cloned into wrong path. Must be `~/.claude/skills/harness/`. |
+| `/harness-bootstrap` not found | Either skill cloned to wrong path (must be `~/.claude/skills/harness/`), or you skipped step 2 of install — symlink commands into `~/.claude/commands/`. Verify: `ls ~/.claude/commands/harness-*.md`. |
 | Bootstrap detects wrong stack | Tell Claude the correct stack/commands; it will pass them as `--config '<json>'` to `bootstrap.sh`. |
 | `verify-features.sh` says drift but you didn't change anything | Either an `evidence.command` is non-deterministic (flaky test), or the `expected_exit` is wrong. Fix the evidence, not the code. |
 | Handoff Stop hook doesn't fire | Check `~/.claude/settings.json` — the hook may not be installed. Re-run `/update-config`. |
