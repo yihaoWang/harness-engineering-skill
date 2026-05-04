@@ -16,11 +16,15 @@ set -euo pipefail
 
 APPLY=0
 CONFIG_OVERRIDE=""
+HOOKS=1               # default: install hooks (framework-mode)
+HOOK_LEVEL="standard" # minimal | standard | aggressive
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply) APPLY=1; shift ;;
     --config) CONFIG_OVERRIDE="$2"; shift 2 ;;
+    --no-hooks) HOOKS=0; shift ;;
+    --hook-level) HOOK_LEVEL="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -181,3 +185,10 @@ if apply:
 
 print(json.dumps(plan, ensure_ascii=False, indent=2))
 PYEOF
+
+# Install hooks (framework-mode) after scaffold is in place
+if [ "$APPLY" = "1" ] && [ "$HOOKS" = "1" ]; then
+  LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  echo "---hooks---"
+  "$LIB_DIR/install-hooks.sh" --level "$HOOK_LEVEL" || echo '{"warning":"hook install failed; harness still works via slash commands"}'
+fi

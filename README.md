@@ -131,23 +131,40 @@ git add .harness/ CLAUDE.md
 git commit -m "chore: bootstrap harness"
 ```
 
-### 2. Daily use
+### 2. Framework mode (default — set by bootstrap)
 
-| Goal | Trigger phrase | Slash command |
+Bootstrap installs hooks into `<project>/.claude/settings.json` so harness runs **automatically** without you remembering slash commands. Three opt-in levels:
+
+| Level | Hooks installed | Effect |
 |---|---|---|
-| End session, write handoff so next session resumes cleanly | "收尾" / "handoff" | `/harness-handoff` |
-| Mistake repeated — make it permanently impossible | "這錯不要再犯" / "promote this lesson" | `/harness-promote-lesson` |
-| Independently evaluate UI / code / writing against a rubric | "評估這個 UI / code / 文件" | `/harness-evaluate <kind>` |
+| **minimal** | `SessionStart` + `Stop` | Last session state injected at start; auto-handoff at end. |
+| **standard** *(default)* | + `PostToolUse: Edit\|Write` | Above, plus drift warning when an edit breaks a declared-passing feature. |
+| **aggressive** | + `UserPromptSubmit` reminder | Above, plus a nudge to run `/harness-evaluate` when you say "done" / "ship". |
 
-### 3. Auto-handoff on session end (recommended)
+To pick a level (or change later):
 
-So you never forget to leave a handoff:
-
+```bash
+~/.claude/skills/harness/lib/install-hooks.sh --level standard   # default
+~/.claude/skills/harness/lib/install-hooks.sh --level minimal    # quieter
+~/.claude/skills/harness/lib/install-hooks.sh --level aggressive # most active
+~/.claude/skills/harness/lib/install-hooks.sh --uninstall        # remove only harness hooks (others untouched)
+~/.claude/skills/harness/lib/install-hooks.sh --print            # dry-run
 ```
-/update-config — add a Stop hook that runs /harness-handoff --auto
-```
 
-Now every time the session ends, `progress.md` is updated automatically. The next session reads it and knows where to pick up.
+To skip hook install at bootstrap: `~/.claude/skills/harness/lib/bootstrap.sh --apply --no-hooks --config '<json>'`.
+
+### 3. Manual override — slash commands
+
+For when you want to trigger a mode explicitly (or test it):
+
+| Goal | Slash command |
+|---|---|
+| Force a session handoff right now | `/harness-handoff` |
+| Promote a recurring mistake into a permanent guardrail | `/harness-promote-lesson` |
+| Evaluate UI / code / writing with an independent sub-agent | `/harness-evaluate <kind>` |
+| Re-run bootstrap (e.g., adjust config or hook level) | `/harness-bootstrap` |
+
+You should rarely need these in normal use — the hooks fire on the right events.
 
 ### 4. Seed your `feature_list.json`
 
