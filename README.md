@@ -83,13 +83,118 @@ This separates "cheap truth" from "expensive truth" — both are tracked, neithe
 
 ## Install
 
-Drop the directory under `~/.claude/skills/`:
-
 ```bash
 git clone https://github.com/yihaoWang/harness-engineering-skill.git ~/.claude/skills/harness
 ```
 
-Then in any project: `/harness-bootstrap` → confirm detected stack → done.
+Claude Code picks it up automatically — no restart. The folder name **must** be `harness` (not `harness-engineering-skill`) so the skill name resolves.
+
+## Usage
+
+### 1. First time in a project — bootstrap
+
+```bash
+cd ~/your-project
+```
+
+In Claude Code, either say:
+
+> 初始化 harness  /  initialize harness for this project
+
+…or run the slash command:
+
+```
+/harness-bootstrap
+```
+
+Claude will:
+
+1. Read your `package.json` / `Cargo.toml` / `pyproject.toml` / etc. to detect the stack
+2. Show you the detected `commands` + `ui.framework` and ask you to confirm
+3. Write `.harness/{config.json, progress.md, feature_list.json, lessons.md}` and append a section to your `CLAUDE.md`
+
+Then commit:
+
+```bash
+git add .harness/ CLAUDE.md
+git commit -m "chore: bootstrap harness"
+```
+
+### 2. Daily use
+
+| Goal | Trigger phrase | Slash command |
+|---|---|---|
+| End session, write handoff so next session resumes cleanly | "收尾" / "handoff" | `/harness-handoff` |
+| Mistake repeated — make it permanently impossible | "這錯不要再犯" / "promote this lesson" | `/harness-promote-lesson` |
+| Independently evaluate UI / code / writing against a rubric | "評估這個 UI / code / 文件" | `/harness-evaluate <kind>` |
+
+### 3. Auto-handoff on session end (recommended)
+
+So you never forget to leave a handoff:
+
+```
+/update-config — add a Stop hook that runs /harness-handoff --auto
+```
+
+Now every time the session ends, `progress.md` is updated automatically. The next session reads it and knows where to pick up.
+
+### 4. Seed your `feature_list.json`
+
+After bootstrap, open `.harness/feature_list.json` and add the features your project already has, with **runnable** evidence:
+
+```json
+{
+  "features": [
+    {
+      "id": "user-auth",
+      "status": "passing",
+      "evidence": {
+        "command": "npm test -- auth.spec.ts",
+        "expected_exit": 0,
+        "safe": true
+      }
+    },
+    {
+      "id": "db-schema-deployed",
+      "status": "passing",
+      "evidence": {
+        "command": "npm run db:check",
+        "expected_exit": 0,
+        "safe": false,
+        "verified_at": "2026-05-04T10:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+`safe: true` (default) = re-runnable any time. `safe: false` = needs env / mutates state / long-running — verified at write-time and stamped with `verified_at`.
+
+Then to detect drift any time:
+
+```bash
+~/.claude/skills/harness/lib/verify-features.sh         # safe-only (fast)
+~/.claude/skills/harness/lib/verify-features.sh --full  # include unsafe (slow, before release)
+```
+
+### 5. Custom rubrics for `evaluate` (optional)
+
+Write project-specific rubrics in `.harness/rubrics/`:
+
+- `ui.md` — visual quality criteria for your design system
+- `code.md` — code review criteria for your codebase
+- `writing.md` — doc / spec quality criteria
+
+If a rubric is missing, `evaluate` falls back to a built-in default. A starter `ui.md` ships with the skill at `~/.claude/skills/harness/rubrics/ui.md` — copy it into your project and edit.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `/harness-bootstrap` not found | Cloned into wrong path. Must be `~/.claude/skills/harness/`. |
+| Bootstrap detects wrong stack | Tell Claude the correct stack/commands; it will pass them as `--config '<json>'` to `bootstrap.sh`. |
+| `verify-features.sh` says drift but you didn't change anything | Either an `evidence.command` is non-deterministic (flaky test), or the `expected_exit` is wrong. Fix the evidence, not the code. |
+| Handoff Stop hook doesn't fire | Check `~/.claude/settings.json` — the hook may not be installed. Re-run `/update-config`. |
 
 ## Status
 
